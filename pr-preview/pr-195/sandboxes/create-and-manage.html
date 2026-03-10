@@ -407,20 +407,12 @@
 <section class="tex2jax_ignore mathjax_ignore" id="create-and-manage-sandboxes">
 <h1>Create and Manage Sandboxes<a class="headerlink" href="#create-and-manage-sandboxes" title="Link to this heading">#</a></h1>
 <p>This page walks you through the full sandbox lifecycle: creating, inspecting, connecting to, monitoring, and deleting sandboxes. For background on what sandboxes are and how the runtime works, refer to <a class="reference internal" href="index.html"><span class="std std-doc">About Sandboxes</span></a>.</p>
-<section id="prerequisites">
-<h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading">#</a></h2>
-<p>Ensure the following are ready before creating sandboxes.</p>
-<ul class="simple">
-<li><p>OpenShell CLI installed (<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">nemoclaw</span></code>)</p></li>
-<li><p>Docker running on your machine</p></li>
-</ul>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
 <p>Docker must be running before you create a sandbox. If it isn’t, the CLI
 returns a connection-refused error (<code class="docutils literal notranslate"><span class="pre">os</span> <span class="pre">error</span> <span class="pre">61</span></code>) without explaining
 the cause. Start Docker and try again.</p>
 </div>
-</section>
 <section id="create-a-sandbox">
 <h2>Create a Sandbox<a class="headerlink" href="#create-a-sandbox" title="Link to this heading">#</a></h2>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>nemoclaw<span class="w"> </span>sandbox<span class="w"> </span>create<span class="w"> </span>--<span class="w"> </span>claude
@@ -614,7 +606,6 @@ reconnect later from another terminal or VS Code.</p>
   </div>
   <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#prerequisites">Prerequisites</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#create-a-sandbox">Create a Sandbox</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#create-from-a-community-sandbox-or-custom-image">Create from a Community Sandbox or Custom Image</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#list-and-inspect-sandboxes">List and Inspect Sandboxes</a></li>

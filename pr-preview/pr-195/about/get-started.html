@@ -412,12 +412,21 @@
 <p>Before you begin, make sure you have:</p>
 <ul class="simple">
 <li><p>Python 3.12 or later</p></li>
+<li><p><a class="reference external" href="https://docs.astral.sh/uv/" rel="noreferer noopener" target="_blank">uv</a> installed</p></li>
 <li><p>Docker Desktop running on your machine <!-- TODO: add compatible version --></p></li>
 </ul>
 </section>
 <section id="install-the-openshell-cli">
 <h2>Install the OpenShell CLI<a class="headerlink" href="#install-the-openshell-cli" title="Link to this heading">#</a></h2>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>nemoclaw
+<p>Activate your virtual environment:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>venv<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">source</span><span class="w"> </span>.venv/bin/activate
+</pre></div>
+</div>
+<p>Install the CLI:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>nemoclaw<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--upgrade<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--pre<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--index-url<span class="w"> </span>https://urm.nvidia.com/artifactory/api/pypi/nv-shared-pypi/simple
 </pre></div>
 </div>
 </section>
@@ -431,15 +440,7 @@ Claude Code</label><div class="sd-tab-content docutils">
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>nemoclaw<span class="w"> </span>sandbox<span class="w"> </span>create<span class="w"> </span>--<span class="w"> </span>claude
 </pre></div>
 </div>
-<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>✓ Runtime ready
-✓ Discovered Claude credentials (ANTHROPIC_API_KEY)
-✓ Created sandbox: keen-fox
-✓ Policy loaded (4 protection layers active)
-
-Connecting to keen-fox...
-</pre></div>
-</div>
-<p>The CLI detects your <code class="docutils literal notranslate"><span class="pre">ANTHROPIC_API_KEY</span></code>, creates a provider, builds the sandbox, applies a default policy, and drops you into an interactive session. No additional configuration is required.</p>
+<p>The CLI prompts you to create a provider from local credentials — type <code class="docutils literal notranslate"><span class="pre">yes</span></code> to continue. If <code class="docutils literal notranslate"><span class="pre">ANTHROPIC_API_KEY</span></code> is set in your environment, it is picked up automatically. If not, you can configure it from inside the sandbox after it launches.</p>
 </div>
 <input id="sd-tab-item-1" name="sd-tab-set-0" type="radio">
 <label class="sd-tab-label" for="sd-tab-item-1">
