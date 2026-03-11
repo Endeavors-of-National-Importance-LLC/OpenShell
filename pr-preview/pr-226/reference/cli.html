@@ -430,7 +430,7 @@
 │   ├── create
 │   ├── get [name]
 │   ├── list
-│   ├── delete &lt;name...&gt;
+│   ├── delete &lt;name...&gt; [--all]
 │   ├── connect [name]
 │   ├── upload [name]
 │   ├── download [name]
@@ -539,7 +539,7 @@
 <td><p>List all sandboxes in the active cluster.</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">openshell</span> <span class="pre">sandbox</span> <span class="pre">delete</span> <span class="pre">&lt;name...&gt;</span></code></p></td>
-<td><p>Delete one or more sandboxes by name.</p></td>
+<td><p>Delete one or more sandboxes by name. Use <code class="docutils literal notranslate"><span class="pre">--all</span></code> to delete every sandbox in the active gateway.</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">openshell</span> <span class="pre">sandbox</span> <span class="pre">connect</span> <span class="pre">[name]</span></code></p></td>
 <td><p>Open an interactive SSH session into a running sandbox.</p></td>
@@ -793,6 +793,7 @@
 <span class="gp">$ </span>openshell<span class="w"> </span>gateway<span class="w"> </span>--help
 </pre></div>
 </div>
+<p>Help output groups flags under distinct headings: <code class="docutils literal notranslate"><span class="pre">FLAGS</span></code> for command-specific options, <code class="docutils literal notranslate"><span class="pre">GATEWAY</span> <span class="pre">FLAGS</span></code> for <code class="docutils literal notranslate"><span class="pre">--gateway</span></code> and <code class="docutils literal notranslate"><span class="pre">--gateway-endpoint</span></code>, and <code class="docutils literal notranslate"><span class="pre">GLOBAL</span> <span class="pre">FLAGS</span></code> for <code class="docutils literal notranslate"><span class="pre">--verbose</span></code>, <code class="docutils literal notranslate"><span class="pre">--help</span></code>, and <code class="docutils literal notranslate"><span class="pre">--version</span></code>.</p>
 </section>
 </section>
 
