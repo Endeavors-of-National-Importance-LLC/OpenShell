@@ -66,7 +66,7 @@
 
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Policy Schema Reference" href="policy-schema.html" />
-    <link rel="prev" title="CLI Reference" href="cli.html" />
+    <link rel="prev" title="Configure Inference Routing" href="../inference/configure.html" />
 
 
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -404,7 +404,6 @@
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Reference</span></p>
 <ul class="current nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="cli.html">CLI Reference</a></li>
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">Default Policy Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="policy-schema.html">Policy Schema Reference</a></li>
 <li class="toctree-l1"><a class="reference internal" href="support-matrix.html">Support Matrix</a></li>
@@ -465,7 +464,7 @@
                   
   <section class="tex2jax_ignore mathjax_ignore" id="default-policy-reference">
 <h1>Default Policy Reference<a class="headerlink" href="#default-policy-reference" title="Link to this heading">#</a></h1>
-<p>The default policy is the policy applied when you create an OpenShell sandbox without <code class="docutils literal notranslate"><span class="pre">--policy</span></code>. It is defined in the <a class="reference external" href="https://github.com/NVIDIA/OpenShell/blob/main/deploy/docker/sandbox/dev-sandbox-policy.yaml" rel="noreferer noopener" target="_blank"><code class="docutils literal notranslate"><span class="pre">deploy/docker/sandbox/dev-sandbox-policy.yaml</span></code></a> file.</p>
+<p>The default policy is the policy applied when you create an OpenShell sandbox without <code class="docutils literal notranslate"><span class="pre">--policy</span></code>. It is baked into the community base image (<a class="reference external" href="https://github.com/nvidia/openshell-community" rel="noreferer noopener" target="_blank"><code class="docutils literal notranslate"><span class="pre">ghcr.io/nvidia/openshell-community/sandboxes/base</span></code></a>) and defined in the community repo’s <code class="docutils literal notranslate"><span class="pre">dev-sandbox-policy.yaml</span></code>.</p>
 <section id="agent-compatibility">
 <h2>Agent Compatibility<a class="headerlink" href="#agent-compatibility" title="Link to this heading">#</a></h2>
 <p>The following table shows the coverage of the default policy for common agents.</p>
@@ -499,294 +498,7 @@
 </section>
 <section id="default-policy-blocks">
 <h2>Default Policy Blocks<a class="headerlink" href="#default-policy-blocks" title="Link to this heading">#</a></h2>
-<p>The following tables show the default policy blocks pre-configured in the file.</p>
-<h2>Filesystem, Landlock, and Process</h2>
-<div class="pst-scrollable-table-container"><table class="table">
-<thead>
-<tr class="row-odd"><th class="head"><p>Section</p></th>
-<th class="head"><p>Setting</p></th>
-<th class="head"><p>Value</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><strong>Filesystem</strong></p></td>
-<td><p>Read-only</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">/usr</span></code>, <code class="docutils literal notranslate"><span class="pre">/lib</span></code>, <code class="docutils literal notranslate"><span class="pre">/proc</span></code>, <code class="docutils literal notranslate"><span class="pre">/dev/urandom</span></code>, <code class="docutils literal notranslate"><span class="pre">/app</span></code>, <code class="docutils literal notranslate"><span class="pre">/etc</span></code>, <code class="docutils literal notranslate"><span class="pre">/var/log</span></code></p></td>
-</tr>
-<tr class="row-odd"><td><p></p></td>
-<td><p>Read-write</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">/sandbox</span></code>, <code class="docutils literal notranslate"><span class="pre">/tmp</span></code>, <code class="docutils literal notranslate"><span class="pre">/dev/null</span></code></p></td>
-</tr>
-<tr class="row-even"><td><p></p></td>
-<td><p>Workdir included</p></td>
-<td><p>Yes</p></td>
-</tr>
-<tr class="row-odd"><td><p><strong>Landlock</strong></p></td>
-<td><p>Compatibility</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">best_effort</span></code> (uses the highest ABI the host kernel supports)</p></td>
-</tr>
-<tr class="row-even"><td><p><strong>Process</strong></p></td>
-<td><p>User / Group</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">sandbox</span></code> / <code class="docutils literal notranslate"><span class="pre">sandbox</span></code></p></td>
-</tr>
-</tbody>
-</table>
-</div>
-<h2>Network Policy Blocks</h2>
-<p>Each block pairs a set of endpoints (host and port) with a set of binaries (executable paths inside the sandbox). The proxy identifies the calling binary by resolving the socket to a PID through <code class="docutils literal notranslate"><span class="pre">/proc/net/tcp</span></code> and reading <code class="docutils literal notranslate"><span class="pre">/proc/{pid}/exe</span></code>. A connection is allowed only when both the destination and the calling binary match an entry in the same block. All other outbound traffic is denied.</p>
-<h3>Anthropic API and Telemetry</h3>
-<p>Allows Claude Code to reach its API, feature-flagging (Statsig), error reporting (Sentry), release notes, and the Claude platform dashboard.</p>
-<div class="pst-scrollable-table-container"><table class="table">
-<thead>
-<tr class="row-odd"><th class="head"><p>Endpoint</p></th>
-<th class="head"><p>Port</p></th>
-<th class="head"><p>TLS</p></th>
-<th class="head"><p>Access</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">api.anthropic.com</span></code></p></td>
-<td><p>443</p></td>
-<td><p>terminate</p></td>
-<td><p>full</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">statsig.anthropic.com</span></code></p></td>
-<td><p>443</p></td>
-<td><p>—</p></td>
-<td><p>L4 passthrough</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">sentry.io</span></code></p></td>
-<td><p>443</p></td>
-<td><p>—</p></td>
-<td><p>L4 passthrough</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">raw.githubusercontent.com</span></code></p></td>
-<td><p>443</p></td>
-<td><p>—</p></td>
-<td><p>L4 passthrough</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">platform.claude.com</span></code></p></td>
-<td><p>443</p></td>
-<td><p>—</p></td>
-<td><p>L4 passthrough</p></td>
-</tr>
-</tbody>
-</table>
-</div>
-<p>Only the following binaries can use these endpoints: <code class="docutils literal notranslate"><span class="pre">/usr/local/bin/claude</span></code>, <code class="docutils literal notranslate"><span class="pre">/usr/bin/node</span></code>.</p>
-<h3>Git Clone and Fetch</h3>
-<p>Allows <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">clone</span></code>, <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">fetch</span></code>, and <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">pull</span></code> over HTTPS via Git Smart HTTP. Push (<code class="docutils literal notranslate"><span class="pre">git-receive-pack</span></code>) is disabled by default.</p>
-<div class="pst-scrollable-table-container"><table class="table">
-<thead>
-<tr class="row-odd"><th class="head"><p>Endpoint</p></th>
-<th class="head"><p>Port</p></th>
-<th class="head"><p>TLS</p></th>
-<th class="head"><p>Rules</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">github.com</span></code></p></td>
-<td><p>443</p></td>
-<td><p>terminate</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">GET</span> <span class="pre">/**/info/refs*</span></code>, <code class="docutils literal notranslate"><span class="pre">POST</span> <span class="pre">/**/git-upload-pack</span></code></p></td>
-</tr>
-</tbody>
-</table>
-</div>
-<p>Only the following binaries can use these endpoints: <code class="docutils literal notranslate"><span class="pre">/usr/bin/git</span></code>.</p>
-<h3>NVIDIA API Catalog</h3>
-<p>Allows outbound calls to the NVIDIA hosted inference API. Used by agents that route LLM requests through <code class="docutils literal notranslate"><span class="pre">integrate.api.nvidia.com</span></code>.</p>
-<div class="pst-scrollable-table-container"><table class="table">
-<thead>
-<tr class="row-odd"><th class="head"><p>Endpoint</p></th>
-<th class="head"><p>Port</p></th>
-<th class="head"><p>TLS</p></th>
-<th class="head"><p>Access</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">integrate.api.nvidia.com</span></code></p></td>
-<td><p>443</p></td>
-<td><p>—</p></td>
-<td><p>L4 passthrough</p></td>
-</tr>
-</tbody>
-</table>
-</div>
-<p>Only the following binaries can use these endpoints: <code class="docutils literal notranslate"><span class="pre">/usr/bin/curl</span></code>, <code class="docutils literal notranslate"><span class="pre">/bin/bash</span></code>, <code class="docutils literal notranslate"><span class="pre">/usr/local/bin/opencode</span></code>.</p>
-<h3>GitHub API (Read-Only)</h3>
-<p>Grants read-only access to the GitHub REST API. Enables issue reads, PR listing, and repository metadata lookups without allowing mutations.</p>
-<div class="pst-scrollable-table-container"><table class="table">
-<thead>
-<tr class="row-odd"><th class="head"><p>Endpoint</p></th>
-<th class="head"><p>Port</p></th>
-<th class="head"><p>TLS</p></th>
-<th class="head"><p>Access</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">api.github.com</span></code></p></td>
-<td><p>443</p></td>
-<td><p>terminate</p></td>
-<td><p>read-only</p></td>
-</tr>
-</tbody>
-</table>
-</div>
-<p>Only the following binaries can use these endpoints: <code class="docutils literal notranslate"><span class="pre">/usr/local/bin/claude</span></code>, <code class="docutils literal notranslate"><span class="pre">/usr/bin/gh</span></code>.</p>
-<h3>Python Package Installation</h3>
-<p>Allows <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span></code> and <code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">pip</span> <span class="pre">install</span></code> to reach PyPI, python-build-standalone releases on GitHub, and <code class="docutils literal notranslate"><span class="pre">downloads.python.org</span></code>.</p>
-<div class="pst-scrollable-table-container"><table class="table">
-<thead>
-<tr class="row-odd"><th class="head"><p>Endpoint</p></th>
-<th class="head"><p>Port</p></th>
-<th class="head"><p>TLS</p></th>
-<th class="head"><p>Access</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">pypi.org</span></code></p></td>
-<td><p>443</p></td>
-<td><p>—</p></td>
-<td><p>L4 passthrough</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">files.pythonhosted.org</span></code></p></td>
-<td><p>443</p></td>
-<td><p>—</p></td>
-<td><p>L4 passthrough</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">github.com</span></code></p></td>
-<td><p>443</p></td>
-<td><p>—</p></td>
-<td><p>L4 passthrough</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">objects.githubusercontent.com</span></code></p></td>
-<td><p>443</p></td>
-<td><p>—</p></td>
-<td><p>L4 passthrough</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">api.github.com</span></code></p></td>
-<td><p>443</p></td>
-<td><p>—</p></td>
-<td><p>L4 passthrough</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">downloads.python.org</span></code></p></td>
-<td><p>443</p></td>
-<td><p>—</p></td>
-<td><p>L4 passthrough</p></td>
-</tr>
-</tbody>
-</table>
-</div>
-<p>Only the following binaries can use these endpoints: <code class="docutils literal notranslate"><span class="pre">/sandbox/.venv/bin/python</span></code>, <code class="docutils literal notranslate"><span class="pre">/sandbox/.venv/bin/python3</span></code>, <code class="docutils literal notranslate"><span class="pre">/sandbox/.venv/bin/pip</span></code>, <code class="docutils literal notranslate"><span class="pre">/app/.venv/bin/python</span></code>, <code class="docutils literal notranslate"><span class="pre">/app/.venv/bin/python3</span></code>, <code class="docutils literal notranslate"><span class="pre">/app/.venv/bin/pip</span></code>, <code class="docutils literal notranslate"><span class="pre">/usr/local/bin/uv</span></code>, <code class="docutils literal notranslate"><span class="pre">/sandbox/.uv/python/**</span></code>.</p>
-<h3>VS Code Remote and Marketplace</h3>
-<p>Allows VS Code Server, Remote Containers, and extension marketplace traffic so remote development sessions can download updates and extensions.</p>
-<div class="pst-scrollable-table-container"><table class="table">
-<thead>
-<tr class="row-odd"><th class="head"><p>Endpoint</p></th>
-<th class="head"><p>Port</p></th>
-<th class="head"><p>TLS</p></th>
-<th class="head"><p>Access</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">update.code.visualstudio.com</span></code></p></td>
-<td><p>443</p></td>
-<td><p>—</p></td>
-<td><p>L4 passthrough</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">az764295.vo.msecnd.net</span></code></p></td>
-<td><p>443</p></td>
-<td><p>—</p></td>
-<td><p>L4 passthrough</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">vscode.download.prss.microsoft.com</span></code></p></td>
-<td><p>443</p></td>
-<td><p>—</p></td>
-<td><p>L4 passthrough</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">marketplace.visualstudio.com</span></code></p></td>
-<td><p>443</p></td>
-<td><p>—</p></td>
-<td><p>L4 passthrough</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">gallerycdn.vsassets.io</span></code></p></td>
-<td><p>443</p></td>
-<td><p>—</p></td>
-<td><p>L4 passthrough</p></td>
-</tr>
-</tbody>
-</table>
-</div>
-<p>Only the following binaries can use these endpoints: <code class="docutils literal notranslate"><span class="pre">/usr/bin/curl</span></code>, <code class="docutils literal notranslate"><span class="pre">/usr/bin/wget</span></code>, <code class="docutils literal notranslate"><span class="pre">/sandbox/.vscode-server/**</span></code>, <code class="docutils literal notranslate"><span class="pre">/sandbox/.vscode-remote-containers/**</span></code>.</p>
-<h3>cursor</h3>
-<div class="pst-scrollable-table-container"><table class="table">
-<thead>
-<tr class="row-odd"><th class="head"><p>Endpoint</p></th>
-<th class="head"><p>Port</p></th>
-<th class="head"><p>TLS</p></th>
-<th class="head"><p>Access</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">cursor.blob.core.windows.net</span></code></p></td>
-<td><p>443</p></td>
-<td><p>—</p></td>
-<td><p>L4 passthrough</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">api2.cursor.sh</span></code></p></td>
-<td><p>443</p></td>
-<td><p>—</p></td>
-<td><p>L4 passthrough</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">repo.cursor.sh</span></code></p></td>
-<td><p>443</p></td>
-<td><p>—</p></td>
-<td><p>L4 passthrough</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">download.cursor.sh</span></code></p></td>
-<td><p>443</p></td>
-<td><p>—</p></td>
-<td><p>L4 passthrough</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">cursor.download.prss.microsoft.com</span></code></p></td>
-<td><p>443</p></td>
-<td><p>—</p></td>
-<td><p>L4 passthrough</p></td>
-</tr>
-</tbody>
-</table>
-</div>
-<p>Only the following binaries can use these endpoints: <code class="docutils literal notranslate"><span class="pre">/usr/bin/curl</span></code>, <code class="docutils literal notranslate"><span class="pre">/usr/bin/wget</span></code>, <code class="docutils literal notranslate"><span class="pre">/sandbox/.cursor-server/**</span></code>.</p>
-<h3>opencode</h3>
-<div class="pst-scrollable-table-container"><table class="table">
-<thead>
-<tr class="row-odd"><th class="head"><p>Endpoint</p></th>
-<th class="head"><p>Port</p></th>
-<th class="head"><p>TLS</p></th>
-<th class="head"><p>Access</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">registry.npmjs.org</span></code></p></td>
-<td><p>443</p></td>
-<td><p>—</p></td>
-<td><p>L4 passthrough</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">opencode.ai</span></code></p></td>
-<td><p>443</p></td>
-<td><p>—</p></td>
-<td><p>L4 passthrough</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">integrate.api.nvidia.com</span></code></p></td>
-<td><p>443</p></td>
-<td><p>—</p></td>
-<td><p>L4 passthrough</p></td>
-</tr>
-</tbody>
-</table>
-</div>
-<p>Only the following binaries can use these endpoints: <code class="docutils literal notranslate"><span class="pre">/usr/lib/node_modules/opencode-ai/bin/.opencode</span></code>, <code class="docutils literal notranslate"><span class="pre">/usr/bin/node</span></code>, <code class="docutils literal notranslate"><span class="pre">/usr/local/bin/opencode</span></code>.</p>
+<p>The default policy blocks are defined in the community base image. See the <a class="reference external" href="https://github.com/nvidia/openshell-community" rel="noreferer noopener" target="_blank">openshell-community repository</a> for the full <code class="docutils literal notranslate"><span class="pre">dev-sandbox-policy.yaml</span></code> source.</p>
 </section>
 </section>
 
@@ -801,12 +513,12 @@
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="cli.html"
+       href="../inference/configure.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">CLI Reference</p>
+        <p class="prev-next-title">Configure Inference Routing</p>
       </div>
     </a>
     <a class="right-next"
