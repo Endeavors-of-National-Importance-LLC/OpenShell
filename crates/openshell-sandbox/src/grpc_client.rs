@@ -177,15 +177,47 @@ pub async fn sync_policy(endpoint: &str, sandbox: &str, policy: &ProtoSandboxPol
     sync_policy_with_client(&mut client, sandbox, policy).await
 }
 
+/// Provider environment fetched from the server, indexed by provider type.
+pub struct ProviderEnvironment {
+    /// Env vars indexed by provider type (e.g. `"anthropic"` -> `{"ANTHROPIC_API_KEY": "sk-..."}`).
+    pub by_type: HashMap<String, HashMap<String, String>>,
+}
+
+impl ProviderEnvironment {
+    /// Flatten all provider env vars into a single map for injection into the
+    /// child process. When two different provider types set the same env var,
+    /// one value wins arbitrarily (iteration order over `HashMap` keys is
+    /// nondeterministic).
+    pub fn flatten(self) -> HashMap<String, String> {
+        let mut flat = HashMap::new();
+        for (_provider_type, env) in self.by_type {
+            for (key, value) in env {
+                flat.entry(key).or_insert(value);
+            }
+        }
+        flat
+    }
+
+    /// Returns the set of provider types present.
+    pub fn provider_types(&self) -> Vec<String> {
+        self.by_type.keys().cloned().collect()
+    }
+
+    /// Check if a specific provider type is present.
+    pub fn has_provider_type(&self, provider_type: &str) -> bool {
+        self.by_type.contains_key(provider_type)
+    }
+}
+
 /// Fetch provider environment variables for a sandbox from OpenShell server via gRPC.
 ///
-/// Returns a map of environment variable names to values derived from provider
-/// credentials configured on the sandbox. Returns an empty map if the sandbox
-/// has no providers or the call fails.
+/// Returns provider credentials indexed by provider type. Use
+/// [`ProviderEnvironment::flatten`] to merge into a single env var map for
+/// injection into the child process.
 pub async fn fetch_provider_environment(
     endpoint: &str,
     sandbox_id: &str,
-) -> Result<HashMap<String, String>> {
+) -> Result<ProviderEnvironment> {
     debug!(endpoint = %endpoint, sandbox_id = %sandbox_id, "Fetching provider environment");
 
     let mut client = connect(endpoint).await?;
@@ -197,7 +229,13 @@ pub async fn fetch_provider_environment(
         .await
         .into_diagnostic()?;
 
-    Ok(response.into_inner().environment)
+    let inner = response.into_inner();
+    let by_type = inner
+        .providers
+        .into_iter()
+        .map(|(provider_type, entry)| (provider_type, entry.environment))
+        .collect();
+    Ok(ProviderEnvironment { by_type })
 }
 
 /// A reusable gRPC client for the OpenShell service.

@@ -186,22 +186,31 @@ pub async fn run_sandbox(
     // Fetch provider environment variables from the server.
     // This is done after loading the policy so the sandbox can still start
     // even if provider env fetch fails (graceful degradation).
-    let provider_env = if let (Some(id), Some(endpoint)) = (&sandbox_id, &openshell_endpoint) {
+    let provider_result = if let (Some(id), Some(endpoint)) = (&sandbox_id, &openshell_endpoint) {
         match grpc_client::fetch_provider_environment(endpoint, id).await {
-            Ok(env) => {
-                info!(env_count = env.len(), "Fetched provider environment");
-                env
+            Ok(result) => {
+                info!(
+                    provider_types = ?result.provider_types(),
+                    "Fetched provider environment"
+                );
+                result
             }
             Err(e) => {
                 warn!(error = %e, "Failed to fetch provider environment, continuing without");
-                std::collections::HashMap::new()
+                grpc_client::ProviderEnvironment {
+                    by_type: std::collections::HashMap::new(),
+                }
             }
         }
     } else {
-        std::collections::HashMap::new()
+        grpc_client::ProviderEnvironment {
+            by_type: std::collections::HashMap::new(),
+        }
     };
 
-    let (provider_env, secret_resolver) = SecretResolver::from_provider_env(provider_env);
+    let has_anthropic = provider_result.has_provider_type("anthropic");
+    let (provider_env, secret_resolver) =
+        SecretResolver::from_provider_env(provider_result.flatten());
     let secret_resolver = secret_resolver.map(Arc::new);
 
     // Create identity cache for SHA256 TOFU when OPA is active
@@ -500,6 +509,12 @@ pub async fn run_sandbox(
                 ));
             }
         }
+    }
+
+    // Write provider-specific config files (e.g., Claude Code onboarding bypass
+    // for the anthropic provider). Non-fatal: sandbox still starts on failure.
+    if let Err(e) = write_provider_configs(has_anthropic, &policy) {
+        warn!(error = %e, "Failed to write provider config files, continuing without");
     }
 
     #[cfg(target_os = "linux")]
@@ -1176,6 +1191,62 @@ fn prepare_filesystem(policy: &SandboxPolicy) -> Result<()> {
 
 #[cfg(not(unix))]
 fn prepare_filesystem(_policy: &SandboxPolicy) -> Result<()> {
+    Ok(())
+}
+
+/// Write provider-specific configuration files to the sandbox user's home directory.
+///
+/// Currently handles the `anthropic` provider type by writing a `.claude.json`
+/// file that marks onboarding as complete, allowing Claude Code to start
+/// without interactive setup when `ANTHROPIC_API_KEY` is present in the
+/// environment.
+#[cfg(unix)]
+fn write_provider_configs(has_anthropic: bool, policy: &SandboxPolicy) -> Result<()> {
+    use nix::unistd::{User, chown};
+
+    if !has_anthropic {
+        return Ok(());
+    }
+
+    // Resolve sandbox user and home directory (same logic as session_user_and_home in ssh.rs).
+    let user_name = policy.process.run_as_user.as_deref().unwrap_or("sandbox");
+    let (uid, gid, home) = {
+        let user = User::from_name(user_name)
+            .into_diagnostic()?
+            .ok_or_else(|| miette::miette!("sandbox user '{user_name}' not found"))?;
+        let gid = user.gid;
+        let home = user.dir.to_string_lossy().into_owned();
+        (user.uid, gid, home)
+    };
+
+    let claude_json_path = std::path::Path::new(&home).join(".claude.json");
+
+    let config = serde_json::json!({
+        "hasCompletedOnboarding": true
+    });
+
+    if let Some(parent) = claude_json_path.parent() {
+        std::fs::create_dir_all(parent).into_diagnostic()?;
+    }
+
+    std::fs::write(
+        &claude_json_path,
+        serde_json::to_string_pretty(&config).unwrap(),
+    )
+    .into_diagnostic()?;
+
+    chown(&claude_json_path, Some(uid), Some(gid)).into_diagnostic()?;
+
+    info!(
+        path = %claude_json_path.display(),
+        "Wrote Claude Code config for anthropic provider"
+    );
+
+    Ok(())
+}
+
+#[cfg(not(unix))]
+fn write_provider_configs(_has_anthropic: bool, _policy: &SandboxPolicy) -> Result<()> {
     Ok(())
 }
 

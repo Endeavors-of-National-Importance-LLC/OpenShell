@@ -425,10 +425,18 @@ message GetSandboxProviderEnvironmentRequest {
   string sandbox_id = 1;
 }
 
+// Environment variables for a single provider type.
+message ProviderEnvironmentEntry {
+  // Credential environment variables for this provider type.
+  map<string, string> environment = 1;
+}
+
 // Get sandbox provider environment response.
 message GetSandboxProviderEnvironmentResponse {
-  // Provider credential environment variables.
-  map<string, string> environment = 1;
+  // Provider credential environment variables, indexed by provider type.
+  // When multiple providers share the same type, their env vars are merged
+  // under a single entry (first value wins on duplicate keys).
+  map<string, ProviderEnvironmentEntry> providers = 1;
 }
 
 // ---------------------------------------------------------------------------

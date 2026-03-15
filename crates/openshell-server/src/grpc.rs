@@ -22,8 +22,8 @@ use openshell_core::proto::{
     GetSandboxProviderEnvironmentRequest, GetSandboxProviderEnvironmentResponse, GetSandboxRequest,
     HealthRequest, HealthResponse, ListProvidersRequest, ListProvidersResponse,
     ListSandboxPoliciesRequest, ListSandboxPoliciesResponse, ListSandboxesRequest,
-    ListSandboxesResponse, PolicyChunk, PolicyStatus, Provider, ProviderResponse,
-    PushSandboxLogsRequest, PushSandboxLogsResponse, RejectDraftChunkRequest,
+    ListSandboxesResponse, PolicyChunk, PolicyStatus, Provider, ProviderEnvironmentEntry,
+    ProviderResponse, PushSandboxLogsRequest, PushSandboxLogsResponse, RejectDraftChunkRequest,
     RejectDraftChunkResponse, ReportPolicyStatusRequest, ReportPolicyStatusResponse,
     RevokeSshSessionRequest, RevokeSshSessionResponse, SandboxLogLine, SandboxPolicyRevision,
     SandboxResponse, SandboxStreamEvent, ServiceStatus, SshSession, SubmitPolicyAnalysisRequest,
@@ -810,18 +810,26 @@ impl OpenShell for OpenShellService {
             .spec
             .ok_or_else(|| Status::internal("sandbox has no spec"))?;
 
-        let environment =
+        let by_type =
             resolve_provider_environment(self.state.store.as_ref(), &spec.providers).await?;
 
+        let env_count: usize = by_type.values().map(|e| e.len()).sum();
         info!(
             sandbox_id = %sandbox_id,
             provider_count = spec.providers.len(),
-            env_count = environment.len(),
+            env_count = env_count,
             "GetSandboxProviderEnvironment request completed successfully"
         );
 
+        let providers = by_type
+            .into_iter()
+            .map(|(provider_type, environment)| {
+                (provider_type, ProviderEnvironmentEntry { environment })
+            })
+            .collect();
+
         Ok(Response::new(GetSandboxProviderEnvironmentResponse {
-            environment,
+            providers,
         }))
     }
 
@@ -2741,21 +2749,25 @@ fn build_remote_exec_command(req: &ExecSandboxRequest) -> String {
     }
 }
 
-/// Resolve provider credentials into environment variables.
+/// Resolved provider environment: credential env vars indexed by provider type.
+type ProviderEnvByType =
+    std::collections::HashMap<String, std::collections::HashMap<String, String>>;
+
+/// Resolve provider credentials into environment variables, indexed by provider type.
 ///
 /// For each provider name in the list, fetches the provider from the store and
-/// collects credential key-value pairs. Returns a map of environment variables
-/// to inject into the sandbox. When duplicate keys appear across providers, the
-/// first provider's value wins.
+/// collects credential key-value pairs grouped by provider type. When multiple
+/// providers share the same type, their credentials merge under one entry
+/// (first value wins on duplicate keys within the same type).
 async fn resolve_provider_environment(
     store: &crate::persistence::Store,
     provider_names: &[String],
-) -> Result<std::collections::HashMap<String, String>, Status> {
+) -> Result<ProviderEnvByType, Status> {
     if provider_names.is_empty() {
-        return Ok(std::collections::HashMap::new());
+        return Ok(ProviderEnvByType::new());
     }
 
-    let mut env = std::collections::HashMap::new();
+    let mut by_type = ProviderEnvByType::new();
 
     for name in provider_names {
         let provider = store
@@ -2764,9 +2776,17 @@ async fn resolve_provider_environment(
             .map_err(|e| Status::internal(format!("failed to fetch provider '{name}': {e}")))?
             .ok_or_else(|| Status::failed_precondition(format!("provider '{name}' not found")))?;
 
+        let provider_type = if provider.r#type.is_empty() {
+            "unknown".to_string()
+        } else {
+            provider.r#type.clone()
+        };
+
+        let type_env = by_type.entry(provider_type).or_default();
+
         for (key, value) in &provider.credentials {
             if is_valid_env_key(key) {
-                env.entry(key.clone()).or_insert_with(|| value.clone());
+                type_env.entry(key.clone()).or_insert_with(|| value.clone());
             } else {
                 warn!(
                     provider_name = %name,
@@ -2777,7 +2797,7 @@ async fn resolve_provider_environment(
         }
     }
 
-    Ok(env)
+    Ok(by_type)
 }
 
 fn is_valid_env_key(key: &str) -> bool {
@@ -3691,10 +3711,17 @@ mod tests {
         let result = resolve_provider_environment(&store, &["claude-local".to_string()])
             .await
             .unwrap();
-        assert_eq!(result.get("ANTHROPIC_API_KEY"), Some(&"sk-abc".to_string()));
-        assert_eq!(result.get("CLAUDE_API_KEY"), Some(&"sk-abc".to_string()));
+        let claude_env = result.get("claude").expect("claude type should be present");
+        assert_eq!(
+            claude_env.get("ANTHROPIC_API_KEY"),
+            Some(&"sk-abc".to_string())
+        );
+        assert_eq!(
+            claude_env.get("CLAUDE_API_KEY"),
+            Some(&"sk-abc".to_string())
+        );
         // Config values should NOT be injected.
-        assert!(!result.contains_key("endpoint"));
+        assert!(!claude_env.contains_key("endpoint"));
     }
 
     #[tokio::test]
@@ -3728,9 +3755,10 @@ mod tests {
         let result = resolve_provider_environment(&store, &["test-provider".to_string()])
             .await
             .unwrap();
-        assert_eq!(result.get("VALID_KEY"), Some(&"value".to_string()));
-        assert!(!result.contains_key("nested.api_key"));
-        assert!(!result.contains_key("bad-key"));
+        let test_env = result.get("test").expect("test type should be present");
+        assert_eq!(test_env.get("VALID_KEY"), Some(&"value".to_string()));
+        assert!(!test_env.contains_key("nested.api_key"));
+        assert!(!test_env.contains_key("bad-key"));
     }
 
     #[tokio::test]
@@ -3772,8 +3800,16 @@ mod tests {
         )
         .await
         .unwrap();
-        assert_eq!(result.get("ANTHROPIC_API_KEY"), Some(&"sk-abc".to_string()));
-        assert_eq!(result.get("GITLAB_TOKEN"), Some(&"glpat-xyz".to_string()));
+        let claude_env = result.get("claude").expect("claude type");
+        assert_eq!(
+            claude_env.get("ANTHROPIC_API_KEY"),
+            Some(&"sk-abc".to_string())
+        );
+        let gitlab_env = result.get("gitlab").expect("gitlab type");
+        assert_eq!(
+            gitlab_env.get("GITLAB_TOKEN"),
+            Some(&"glpat-xyz".to_string())
+        );
     }
 
     #[tokio::test]
@@ -3784,7 +3820,7 @@ mod tests {
             Provider {
                 id: String::new(),
                 name: "provider-a".to_string(),
-                r#type: "claude".to_string(),
+                r#type: "shared-type".to_string(),
                 credentials: std::iter::once(("SHARED_KEY".to_string(), "first-value".to_string()))
                     .collect(),
                 config: HashMap::new(),
@@ -3797,7 +3833,7 @@ mod tests {
             Provider {
                 id: String::new(),
                 name: "provider-b".to_string(),
-                r#type: "gitlab".to_string(),
+                r#type: "shared-type".to_string(),
                 credentials: std::iter::once((
                     "SHARED_KEY".to_string(),
                     "second-value".to_string(),
@@ -3815,7 +3851,57 @@ mod tests {
         )
         .await
         .unwrap();
-        assert_eq!(result.get("SHARED_KEY"), Some(&"first-value".to_string()));
+        let env = result.get("shared-type").expect("shared-type should exist");
+        assert_eq!(env.get("SHARED_KEY"), Some(&"first-value".to_string()));
+    }
+
+    #[tokio::test]
+    async fn resolve_provider_env_same_type_merges() {
+        let store = Store::connect("sqlite::memory:").await.unwrap();
+        create_provider_record(
+            &store,
+            Provider {
+                id: String::new(),
+                name: "anthropic-1".to_string(),
+                r#type: "anthropic".to_string(),
+                credentials: std::iter::once(("ANTHROPIC_API_KEY".to_string(), "sk-1".to_string()))
+                    .collect(),
+                config: HashMap::new(),
+            },
+        )
+        .await
+        .unwrap();
+        create_provider_record(
+            &store,
+            Provider {
+                id: String::new(),
+                name: "anthropic-2".to_string(),
+                r#type: "anthropic".to_string(),
+                credentials: std::iter::once(("ANOTHER_KEY".to_string(), "val".to_string()))
+                    .collect(),
+                config: HashMap::new(),
+            },
+        )
+        .await
+        .unwrap();
+
+        let result = resolve_provider_environment(
+            &store,
+            &["anthropic-1".to_string(), "anthropic-2".to_string()],
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(
+            result.len(),
+            1,
+            "both providers should merge under one type"
+        );
+        let env = result
+            .get("anthropic")
+            .expect("anthropic type should exist");
+        assert_eq!(env.get("ANTHROPIC_API_KEY"), Some(&"sk-1".to_string()));
+        assert_eq!(env.get("ANOTHER_KEY"), Some(&"val".to_string()));
     }
 
     /// Simulates the handler flow: persist a sandbox with providers, then resolve
@@ -3866,11 +3952,15 @@ mod tests {
             .unwrap()
             .unwrap();
         let spec = loaded.spec.unwrap();
-        let env = resolve_provider_environment(&store, &spec.providers)
+        let by_type = resolve_provider_environment(&store, &spec.providers)
             .await
             .unwrap();
 
-        assert_eq!(env.get("ANTHROPIC_API_KEY"), Some(&"sk-test".to_string()));
+        let claude_env = by_type.get("claude").expect("claude type");
+        assert_eq!(
+            claude_env.get("ANTHROPIC_API_KEY"),
+            Some(&"sk-test".to_string())
+        );
     }
 
     /// Handler flow returns empty map when sandbox has no providers.
