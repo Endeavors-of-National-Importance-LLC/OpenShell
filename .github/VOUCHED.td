@@ -8,8 +8,7 @@
 #
 # Format: one GitHub username per line, no @ prefix. Sorted alphabetically.
 # Prefix with - to denounce. See https://github.com/mitchellh/vouch for details.
-brianwtaylor
-Kh4L
 ParthSareen
-tyeth
 will-lms
+tyeth
+brianwtaylor
