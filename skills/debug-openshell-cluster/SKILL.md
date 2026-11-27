@@ -253,6 +253,16 @@ are unavailable. Workload shells belong to the separate sandbox image. Preserve
 the driver-selected UID and writable runtime/log mounts when reproducing a
 supervisor startup failure.
 
+The image's exec healthcheck uses `/run/openshell/health.sock`. Docker and
+Podman override it to match their configured readiness sockets; Kubernetes
+uses its own TCP probes. On a direct image launch, check that the image probe
+matches the explicitly configured `--health-socket-path`; a dedicated
+supervisor does not create a readiness socket unless this flag is set.
+For direct shared or network-proxy launches, use `docker run --no-healthcheck`
+and monitor readiness externally: the shell-free image's native probe supports
+only Unix sockets. The dedicated readiness socket closes when the
+supervisor session becomes unready, so a stale socket file is not sufficient.
+
 A `ConfigurationInvalid` readiness condition means startup admission rejected
 the image/effective policy or provider configuration. The supervisor remains
 alive while the workload stays unstarted. Inspect `openshell sandbox get` and
